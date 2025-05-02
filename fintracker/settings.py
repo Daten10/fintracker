@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-%2ma+!)j)u-cy_hwv+w-se6jv&fprs(bjwp30x0bsd-64e7-nx
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['fintracker-51hz.onrender.com']
 
 
 # Application definition
