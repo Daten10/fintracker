@@ -30,7 +30,7 @@
         category: form.category.value,
         comment: form.comment.value
       };
-      const res = await fetch("https://your-django-backend/api/add_transaction/", {
+      const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data)
