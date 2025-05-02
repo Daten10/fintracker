@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Финансовый трекер</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+  <h3>Добавить транзакцию</h3>
+  <form id="form">
+    <select name="type">
+      <option value="income">Доход</option>
+      <option value="expense">Расход</option>
+    </select><br/>
+    <input name="amount" placeholder="Сумма" type="number"><br/>
+    <input name="category" placeholder="Категория"><br/>
+    <input name="comment" placeholder="Комментарий"><br/>
+    <button>Сохранить</button>
+  </form>
+
+  <script>
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        type: form.type.value,
+        amount: parseFloat(form.amount.value),
+        category: form.category.value,
+        comment: form.comment.value
+      };
+      const res = await fetch("https://your-django-backend/api/add_transaction/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      if (res.ok) tg.close(); else alert("Ошибка!");
+    });
+  </script>
+</body>
+</html>
