@@ -16,27 +16,51 @@
     <input name="comment" placeholder="Комментарий"><br/>
     <button>Сохранить</button>
   </form>
+<script>
+  const tg = window.Telegram.WebApp;
+  tg.expand();
 
-  <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
-
-    document.getElementById('form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const form = e.target;
-      const data = {
-        type: form.type.value,
-        amount: parseFloat(form.amount.value),
-        category: form.category.value,
-        comment: form.comment.value
-      };
-      const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) tg.close(); else alert("Ошибка!");
+  // Отправка формы
+  document.getElementById('form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const data = {
+      type: form.type.value,
+      amount: parseFloat(form.amount.value),
+      category: form.category.value,
+      comment: form.comment.value
+    };
+    const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
     });
-  </script>
+    if (res.ok) {
+      await loadStats(); // обновим статистику после добавления
+      tg.close();
+    } else {
+      alert("Ошибка!");
+    }
+  });
+
+  // Получение и отображение общей статистики
+  async function loadStats() {
+    try {
+      const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
+      const stats = await res.json();
+      const el = document.getElementById("stats");
+      el.innerHTML = `
+        <b>Доход:</b> ${stats.income} ₽<br>
+        <b>Расход:</b> ${stats.expense} ₽
+      `;
+    } catch (e) {
+      console.error("Ошибка при получении статистики", e);
+    }
+  }
+
+  // Загружаем статистику при открытии
+  loadStats();
+</script>
+
 </body>
 </html>
