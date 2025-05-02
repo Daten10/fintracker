@@ -87,6 +87,12 @@
 
   <div class="card">
     <div class="input-group">
+      <label for="type">Тип транзакции</label><br/>
+<select name="type" id="type" style="padding: 8px; border-radius: 8px; width: 100%;">
+  <option value="income">Доход</option>
+  <option value="expense">Расход</option>
+</select><br/><br/>
+
       <input type="text" id="description" placeholder="Описание"/>
       <input type="number" id="amount" placeholder="Сумма"/>
       <button onclick="addTransaction()">Добавить</button>
