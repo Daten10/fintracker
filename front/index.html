@@ -85,53 +85,58 @@
     tg.expand();
 
     async function addTransaction() {
-      const type = document.getElementById("type").value;
-      const description = document.getElementById("description").value;
-      const amount = parseFloat(document.getElementById("amount").value);
+  const type = document.getElementById("type").value;
+  const description = document.getElementById("description").value;
+  const amount = parseFloat(document.getElementById("amount").value);
 
-      if (!description || !amount || isNaN(amount)) {
-        alert("Введите корректные данные");
-        return;
-      }
+  if (!description || !amount || isNaN(amount)) {
+    alert("Введите корректные данные");
+    return;
+  }
 
-      const data = {
-        type: type,
-        amount: amount,
-        comment: description,
-        category: "default"  // обязательно, если требуется в сериализаторе
-      };
+  const data = {
+    type,
+    amount,
+    comment: description,
+    category: "default"
+  };
 
-      try {
-        const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
+  try {
+    const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    });
 
-        if (res.ok) {
-          await loadStats();
-          tg.close(); // Закрытие мини-аппа
-        } else {
-          alert("Ошибка при добавлении");
-        }
-      } catch (err) {
-        console.error("Ошибка сети", err);
-        alert("Сетевая ошибка");
-      }
+    if (res.ok) {
+      await res.json(); // ✅ не обязательно использовать, но ошибка уйдёт
+      await loadStats();
+      tg.close();
+    } else {
+      const err = await res.json();
+      alert("Ошибка при добавлении: " + JSON.stringify(err));
     }
+  } catch (err) {
+    console.error("Ошибка сети", err);
+    alert("Ошибка соединения");
+  }
+}
+async function loadStats() {
+  try {
+    const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
+    const stats = await res.json();
+    const income = stats.income || 0;
+    const expense = stats.expense || 0;
+    document.getElementById("stats").innerHTML = `
+      <strong>Доход:</strong> ${income} ₽<br>
+      <strong>Расход:</strong> ${expense} ₽
+    `;
+  } catch (err) {
+    console.error("Ошибка при получении статистики", err);
+    document.getElementById("stats").innerText = "Ошибка загрузки статистики";
+  }
+}
 
-    async function loadStats() {
-      try {
-        const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
-        const stats = await res.json();
-        document.getElementById("stats").innerHTML = `
-          <strong>Доход:</strong> ${stats.income} ₽<br>
-          <strong>Расход:</strong> ${stats.expense} ₽
-        `;
-      } catch (err) {
-        console.error("Ошибка при получении статистики", err);
-      }
-    }
 
     loadStats();
   </script>
