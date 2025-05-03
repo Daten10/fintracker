@@ -58,6 +58,7 @@
       color: white;
       cursor: pointer;
       transition: 0.3s ease;
+      border: none;
     }
 
     button:hover {
@@ -74,11 +75,30 @@
       padding: 0.5rem 0;
       border-bottom: 1px solid #ccc;
     }
+
+    #message {
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+    }
   </style>
 </head>
 <body>
   <h1>Финансовый Трекер</h1>
   <div id="stats" style="margin: 10px 0; font-size: 16px;"></div>
+  <div id="message" style="display: none;"></div>
 
   <div class="card">
     <div class="input-group">
@@ -106,6 +126,16 @@
   <script>
     const API_BASE = "https://fintracker-51hz.onrender.com/api";
 
+    function showMessage(text, type = "success") {
+      const el = document.getElementById("message");
+      el.textContent = text;
+      el.className = type;
+      el.style.display = "block";
+      setTimeout(() => {
+        el.style.display = "none";
+      }, 3000);
+    }
+
     async function fetchCategories() {
       try {
         const res = await fetch(`${API_BASE}/get_categories/`);
@@ -126,38 +156,49 @@
     async function addTransaction() {
       const type = document.getElementById("type").value;
       const amount = parseFloat(document.getElementById("amount").value);
-      const description = document.getElementById("description").value;
+      const description = document.getElementById("description").value.trim();
       const selectedCategory = document.getElementById("categorySelect").value;
       const newCategory = document.getElementById("newCategory").value.trim();
       const category = newCategory || selectedCategory;
 
-      if (newCategory) {
-        await fetch(`${API_BASE}/create_category/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newCategory })
-        });
-        await fetchCategories(); // обновить список
+      if (!description || isNaN(amount) || amount <= 0) {
+        showMessage("Введите корректные данные", "error");
+        return;
       }
 
-      const res = await fetch(`${API_BASE}/add_transaction/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type,
-          amount,
-          category,
-          comment: description
-        })
-      });
+      try {
+        if (newCategory) {
+          await fetch(`${API_BASE}/create_category/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: newCategory })
+          });
+          await fetchCategories();
+        }
 
-      if (res.ok) {
-        document.getElementById("amount").value = "";
-        document.getElementById("description").value = "";
-        document.getElementById("newCategory").value = "";
-        loadStats();
-      } else {
-        alert("Ошибка при добавлении транзакции");
+        const res = await fetch(`${API_BASE}/add_transaction/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type,
+            amount,
+            category,
+            comment: description
+          })
+        });
+
+        if (res.ok) {
+          document.getElementById("amount").value = "";
+          document.getElementById("description").value = "";
+          document.getElementById("newCategory").value = "";
+          showMessage("Транзакция добавлена!", "success");
+          await loadStats();
+          await loadTransactions();
+        } else {
+          showMessage("Ошибка при добавлении транзакции", "error");
+        }
+      } catch (e) {
+        showMessage("Сетевая ошибка", "error");
       }
     }
 
@@ -171,12 +212,31 @@
           <b>Расход:</b> ${stats.expense} ₽
         `;
       } catch (e) {
-        console.error("Ошибка загрузки статистики", e);
+        showMessage("Ошибка загрузки статистики", "error");
       }
     }
 
+    async function loadTransactions() {
+      try {
+        const res = await fetch(`${API_BASE}/get_transactions/`);
+        const data = await res.json();
+        const list = document.getElementById("transactionList");
+        list.innerHTML = "";
+        data.forEach(tx => {
+          const li = document.createElement("li");
+          li.className = "transaction-item";
+          li.textContent = `${tx.type === 'income' ? '➕' : '➖'} ${tx.comment} — ${tx.amount} ₽ [${tx.category}]`;
+          list.appendChild(li);
+        });
+      } catch (e) {
+        showMessage("Ошибка загрузки истории", "error");
+      }
+    }
+
+    // начальная загрузка
     fetchCategories();
     loadStats();
+    loadTransactions();
   </script>
 </body>
 </html>
