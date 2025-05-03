@@ -198,6 +198,32 @@
     }
 
     loadStats();
+     async function loadTransactions() {
+    try {
+      const res = await fetch("https://fintracker-51hz.onrender.com/api/get_transactions/");
+      const data = await res.json();
+      const list = document.getElementById("transactionList");
+      list.innerHTML = "";
+
+      data.forEach(tx => {
+        const li = document.createElement("li");
+        li.className = "transaction-item";
+        li.textContent = `${tx.type === 'income' ? '➕' : '➖'} ${tx.comment} — ${tx.amount} ₽`;
+        list.appendChild(li);
+      });
+
+    } catch (err) {
+      console.error("Ошибка загрузки истории транзакций", err);
+    }
+  }
+
+  // вызывай при загрузке и после добавления
+  loadStats();
+  loadTransactions();
+
+  // и внутри addTransaction() после loadStats():
+  await loadStats();
+  await loadTransactions();
   </script>
 </body>
 </html>

@@ -21,3 +21,9 @@ def get_stats(request):
     expense = Transaction.objects.filter(type='expense').aggregate(Sum('amount'))['amount__sum'] or 0
     return JsonResponse({'income': income, 'expense': expense})  # ✅ JsonResponse для надежности
 
+
+@api_view(['GET'])
+def get_transactions(request):
+    transactions = Transaction.objects.order_by('-id')[:20]  # последние 20
+    serializer = TransactionSerializer(transactions, many=True)
+    return Response(serializer.data)
