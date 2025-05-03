@@ -1,7 +1,7 @@
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Transaction
-from .serializers import TransactionSerializer
+from .models import Transaction, Category
+from .serializers import TransactionSerializer, CategorySerializer
 from django.db.models import Sum
 from django.http import JsonResponse
 
@@ -27,3 +27,19 @@ def get_transactions(request):
     transactions = Transaction.objects.order_by('-id')[:20]  # последние 20
     serializer = TransactionSerializer(transactions, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def get_categories(request):
+    categories = Category.objects.all()
+    serializer = CategorySerializer(categories, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['POST'])
+def create_category(request):
+    serializer = CategorySerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+        return Response({'status': 'created'})
+    return Response(serializer.errors, status=400)
