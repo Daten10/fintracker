@@ -198,7 +198,12 @@
     }
 
     loadStats();
-     async function loadTransactions() {
+
+  </script>
+
+<script>
+  // 👇 после loadStats()
+  async function loadTransactions() {
     try {
       const res = await fetch("https://fintracker-51hz.onrender.com/api/get_transactions/");
       const data = await res.json();
@@ -224,6 +229,7 @@
   // и внутри addTransaction() после loadStats():
   await loadStats();
   await loadTransactions();
-  </script>
+</script>
+
 </body>
 </html>
