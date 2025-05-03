@@ -198,6 +198,10 @@
     }
 
     loadStats();
+
+  </script>
+
+<script>
   // 👇 после loadStats()
   async function loadTransactions() {
     try {
@@ -225,9 +229,7 @@
   // и внутри addTransaction() после loadStats():
   await loadStats();
   await loadTransactions();
-  </script>
-
-
+</script>
 
 </body>
 </html>
