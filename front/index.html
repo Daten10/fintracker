@@ -5,44 +5,67 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Финансовый Трекер</title>
   <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --card: #f4f4f4;
+      --accent: #007aff;
+    }
+
+    [data-theme="dark"] {
+      --bg: #121212;
+      --text: #ffffff;
+      --card: #1e1e1e;
+      --accent: #0a84ff;
+    }
+
     body {
       margin: 0;
       padding: 1rem;
-      font-family: sans-serif;
-      background: #f8f8f8;
-      color: #222;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     }
 
     h1 {
       text-align: center;
+      margin-bottom: 1.5rem;
     }
 
     .card {
-      background: white;
+      background: var(--card);
+      border-radius: 12px;
       padding: 1rem;
-      margin: 1rem 0;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
     }
 
     .input-group {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.75rem;
     }
 
-    input, select, button {
+    input, button, select {
       padding: 0.75rem;
-      border-radius: 8px;
       border: 1px solid #ccc;
+      border-radius: 8px;
       font-size: 1rem;
+      width: 100%;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
     }
 
     button {
-      background: #007aff;
+      background: var(--accent);
       color: white;
-      border: none;
+      font-weight: bold;
       cursor: pointer;
+      transition: 0.3s ease;
+      border: none;
     }
 
     button:hover {
@@ -52,91 +75,127 @@
     .transaction-list {
       list-style: none;
       padding: 0;
+      margin: 0;
     }
 
     .transaction-item {
       padding: 0.5rem 0;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #message {
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+    }
+
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
     }
   </style>
 </head>
 <body>
-
   <h1>Финансовый Трекер</h1>
-  <div id="stats" style="margin-bottom: 1rem;"></div>
+  <div id="stats" style="margin-bottom: 1rem; font-size: 1.1rem;"></div>
+
+  <div id="message" style="display: none;"></div>
 
   <div class="card">
     <div class="input-group">
-      <label for="type">Тип</label>
+      <label for="type">Тип транзакции</label>
       <select id="type">
         <option value="income">Доход</option>
         <option value="expense">Расход</option>
       </select>
 
-      <input type="text" id="description" placeholder="Описание"/>
-      <input type="number" id="amount" placeholder="Сумма"/>
+      <input type="text" id="description" placeholder="Описание" />
+      <input type="number" id="amount" placeholder="Сумма" />
 
       <button onclick="addTransaction()">Добавить</button>
     </div>
   </div>
 
+  <div class="card">
+    <h3>История транзакций</h3>
+    <ul class="transaction-list" id="transactionList"></ul>
+  </div>
+
   <script>
-    const tg = window.Telegram.WebApp;
-    tg.expand();
+    const tg = window.Telegram?.WebApp;
+    if (tg) tg.expand();
+
+    async function loadStats() {
+      try {
+        const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
+        const stats = await res.json();
+        const income = stats.income || 0;
+        const expense = stats.expense || 0;
+        document.getElementById("stats").innerHTML = `
+          <strong>Доход:</strong> ${income} ₽<br>
+          <strong>Расход:</strong> ${expense} ₽
+        `;
+      } catch (err) {
+        showMessage("Ошибка загрузки статистики", "error");
+      }
+    }
+
+    function showMessage(text, type = "success") {
+      const el = document.getElementById("message");
+      el.textContent = text;
+      el.className = type;
+      el.style.display = "block";
+      setTimeout(() => {
+        el.style.display = "none";
+      }, 3000);
+    }
 
     async function addTransaction() {
-  const type = document.getElementById("type").value;
-  const description = document.getElementById("description").value;
-  const amount = parseFloat(document.getElementById("amount").value);
+      const type = document.getElementById("type").value;
+      const description = document.getElementById("description").value.trim();
+      const amount = parseFloat(document.getElementById("amount").value);
 
-  if (!description || !amount || isNaN(amount)) {
-    alert("Введите корректные данные");
-    return;
-  }
+      if (!description || isNaN(amount) || amount <= 0) {
+        showMessage("Пожалуйста, введите корректные данные", "error");
+        return;
+      }
 
-  const data = {
-    type,
-    amount,
-    comment: description,
-    category: "default"
-  };
+      const data = {
+        type,
+        amount,
+        comment: description,
+        category: "default"
+      };
 
-  try {
-    const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
+      try {
+        const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
 
-    if (res.ok) {
-      await res.json(); // ✅ не обязательно использовать, но ошибка уйдёт
-      await loadStats();
-      tg.close();
-    } else {
-      const err = await res.json();
-      alert("Ошибка при добавлении: " + JSON.stringify(err));
+        if (res.ok) {
+          await res.json();
+          document.getElementById("description").value = "";
+          document.getElementById("amount").value = "";
+          await loadStats();
+          showMessage("Транзакция добавлена", "success");
+        } else {
+          const err = await res.json();
+          showMessage("Ошибка: " + JSON.stringify(err), "error");
+        }
+      } catch (err) {
+        console.error("Ошибка сети", err);
+        showMessage("Ошибка соединения", "error");
+      }
     }
-  } catch (err) {
-    console.error("Ошибка сети", err);
-    alert("Ошибка соединения");
-  }
-}
-async function loadStats() {
-  try {
-    const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
-    const stats = await res.json();
-    const income = stats.income || 0;
-    const expense = stats.expense || 0;
-    document.getElementById("stats").innerHTML = `
-      <strong>Доход:</strong> ${income} ₽<br>
-      <strong>Расход:</strong> ${expense} ₽
-    `;
-  } catch (err) {
-    console.error("Ошибка при получении статистики", err);
-    document.getElementById("stats").innerText = "Ошибка загрузки статистики";
-  }
-}
-
 
     loadStats();
   </script>
