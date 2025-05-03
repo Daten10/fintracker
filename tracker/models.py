@@ -11,7 +11,6 @@ class Category(models.Model):
 class Transaction(models.Model):
     TYPE_CHOICES = (("income", "Доход"), ("expense", "Расход"))
 
-    user_id = models.BigIntegerField()
     type = models.CharField(max_length=10, choices=TYPE_CHOICES)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     comment = models.CharField(max_length=255)
