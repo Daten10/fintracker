@@ -123,120 +123,106 @@
     <ul class="transaction-list" id="transactionList"></ul>
   </div>
 
-  <script>
-    const API_BASE = "https://fintracker-51hz.onrender.com/api";
+<script>
+  const API_BASE = "https://fintracker-51hz.onrender.com/api";
+  const tg = window.Telegram?.WebApp;
+  tg?.expand();
 
-    function showMessage(text, type = "success") {
-      const el = document.getElementById("message");
-      el.textContent = text;
-      el.className = type;
-      el.style.display = "block";
-      setTimeout(() => {
-        el.style.display = "none";
-      }, 3000);
+  const USER_ID = tg?.initDataUnsafe?.user?.id;
+
+  async function fetchCategories() {
+    try {
+      const res = await fetch(`${API_BASE}/get_categories/?user_id=${USER_ID}`);
+      const data = await res.json();
+      const select = document.getElementById("categorySelect");
+      select.innerHTML = "";
+      data.forEach(cat => {
+        const option = document.createElement("option");
+        option.value = cat.name;
+        option.textContent = cat.name;
+        select.appendChild(option);
+      });
+    } catch (e) {
+      console.error("Ошибка загрузки категорий", e);
+    }
+  }
+
+  async function addTransaction() {
+    const type = document.getElementById("type").value;
+    const amount = parseFloat(document.getElementById("amount").value);
+    const description = document.getElementById("description").value;
+    const selectedCategory = document.getElementById("categorySelect").value;
+    const newCategory = document.getElementById("newCategory").value.trim();
+    const category = newCategory || selectedCategory;
+
+    if (!USER_ID) return alert("Ошибка: user_id не найден");
+
+    if (newCategory) {
+      await fetch(`${API_BASE}/create_category/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCategory, user_id: USER_ID })
+      });
+      await fetchCategories();
     }
 
-    async function fetchCategories() {
-      try {
-        const res = await fetch(`${API_BASE}/get_categories/`);
-        const data = await res.json();
-        const select = document.getElementById("categorySelect");
-        select.innerHTML = "";
-        data.forEach(cat => {
-          const option = document.createElement("option");
-          option.value = cat.name;
-          option.textContent = cat.name;
-          select.appendChild(option);
-        });
-      } catch (e) {
-        console.error("Ошибка загрузки категорий", e);
-      }
+    const res = await fetch(`${API_BASE}/add_transaction/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type,
+        amount,
+        category,
+        comment: description,
+        user_id: USER_ID
+      })
+    });
+
+    if (res.ok) {
+      document.getElementById("amount").value = "";
+      document.getElementById("description").value = "";
+      document.getElementById("newCategory").value = "";
+      loadStats();
+      loadTransactions();
+    } else {
+      alert("Ошибка при добавлении транзакции");
     }
+  }
 
-    async function addTransaction() {
-      const type = document.getElementById("type").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-      const description = document.getElementById("description").value.trim();
-      const selectedCategory = document.getElementById("categorySelect").value;
-      const newCategory = document.getElementById("newCategory").value.trim();
-      const category = newCategory || selectedCategory;
-
-      if (!description || isNaN(amount) || amount <= 0) {
-        showMessage("Введите корректные данные", "error");
-        return;
-      }
-
-      try {
-        if (newCategory) {
-          await fetch(`${API_BASE}/create_category/`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name: newCategory })
-          });
-          await fetchCategories();
-        }
-
-        const res = await fetch(`${API_BASE}/add_transaction/`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type,
-            amount,
-            category,
-            comment: description
-          })
-        });
-
-        if (res.ok) {
-          document.getElementById("amount").value = "";
-          document.getElementById("description").value = "";
-          document.getElementById("newCategory").value = "";
-          showMessage("Транзакция добавлена!", "success");
-          await loadStats();
-          await loadTransactions();
-        } else {
-          showMessage("Ошибка при добавлении транзакции", "error");
-        }
-      } catch (e) {
-        showMessage("Сетевая ошибка", "error");
-      }
+  async function loadStats() {
+    try {
+      const res = await fetch(`${API_BASE}/get_stats/?user_id=${USER_ID}`);
+      const stats = await res.json();
+      document.getElementById("stats").innerHTML = `
+        <b>Доход:</b> ${stats.income} ₽<br>
+        <b>Расход:</b> ${stats.expense} ₽
+      `;
+    } catch (e) {
+      console.error("Ошибка загрузки статистики", e);
     }
+  }
 
-    async function loadStats() {
-      try {
-        const res = await fetch(`${API_BASE}/get_stats/`);
-        const stats = await res.json();
-        const el = document.getElementById("stats");
-        el.innerHTML = `
-          <b>Доход:</b> ${stats.income} ₽<br>
-          <b>Расход:</b> ${stats.expense} ₽
-        `;
-      } catch (e) {
-        showMessage("Ошибка загрузки статистики", "error");
-      }
+  async function loadTransactions() {
+    try {
+      const res = await fetch(`${API_BASE}/get_transactions/?user_id=${USER_ID}`);
+      const data = await res.json();
+      const list = document.getElementById("transactionList");
+      list.innerHTML = "";
+      data.forEach(tx => {
+        const li = document.createElement("li");
+        li.className = "transaction-item";
+        li.textContent = `${tx.type === 'income' ? '➕' : '➖'} ${tx.comment} — ${tx.amount} ₽ (${tx.category})`;
+        list.appendChild(li);
+      });
+    } catch (e) {
+      console.error("Ошибка загрузки истории", e);
     }
+  }
 
-    async function loadTransactions() {
-      try {
-        const res = await fetch(`${API_BASE}/get_transactions/`);
-        const data = await res.json();
-        const list = document.getElementById("transactionList");
-        list.innerHTML = "";
-        data.forEach(tx => {
-          const li = document.createElement("li");
-          li.className = "transaction-item";
-          li.textContent = `${tx.type === 'income' ? '➕' : '➖'} ${tx.comment} — ${tx.amount} ₽ [${tx.category}]`;
-          list.appendChild(li);
-        });
-      } catch (e) {
-        showMessage("Ошибка загрузки истории", "error");
-      }
-    }
+  fetchCategories();
+  loadStats();
+  loadTransactions();
+</script>
 
-    // начальная загрузка
-    fetchCategories();
-    loadStats();
-    loadTransactions();
-  </script>
 </body>
 </html>
