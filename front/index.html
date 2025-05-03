@@ -1,43 +1,28 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Финансовый Трекер</title>
   <style>
-    :root {
-      --bg: #ffffff;
-      --text: #1a1a1a;
-      --card: #f4f4f4;
-      --accent: #007aff;
-    }
-
-    [data-theme="dark"] {
-      --bg: #121212;
-      --text: #ffffff;
-      --card: #1e1e1e;
-      --accent: #0a84ff;
-    }
-
     body {
       margin: 0;
       padding: 1rem;
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      font-family: sans-serif;
+      background: #f8f8f8;
+      color: #222;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 1rem;
     }
 
     .card {
-      background: var(--card);
-      border-radius: 12px;
+      background: white;
       padding: 1rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      margin: 1rem 0;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
 
     .input-group {
@@ -46,23 +31,18 @@
       gap: 0.5rem;
     }
 
-    input, button {
+    input, select, button {
       padding: 0.75rem;
-      border: none;
       border-radius: 8px;
+      border: 1px solid #ccc;
       font-size: 1rem;
     }
 
-    input {
-      background: #fff;
-      border: 1px solid #ccc;
-    }
-
     button {
-      background: var(--accent);
+      background: #007aff;
       color: white;
+      border: none;
       cursor: pointer;
-      transition: 0.3s ease;
     }
 
     button:hover {
@@ -72,83 +52,88 @@
     .transaction-list {
       list-style: none;
       padding: 0;
-      margin: 0;
     }
 
     .transaction-item {
       padding: 0.5rem 0;
-      border-bottom: 1px solid #ccc;
+      border-bottom: 1px solid #eee;
     }
   </style>
 </head>
 <body>
+
   <h1>Финансовый Трекер</h1>
-  <div id="stats" style="margin: 10px 0; font-size: 16px;"></div>
+  <div id="stats" style="margin-bottom: 1rem;"></div>
 
   <div class="card">
     <div class="input-group">
-      <label for="type">Тип транзакции</label><br/>
-<select name="type" id="type" style="padding: 8px; border-radius: 8px; width: 100%;">
-  <option value="income">Доход</option>
-  <option value="expense">Расход</option>
-</select><br/><br/>
+      <label for="type">Тип</label>
+      <select id="type">
+        <option value="income">Доход</option>
+        <option value="expense">Расход</option>
+      </select>
 
       <input type="text" id="description" placeholder="Описание"/>
       <input type="number" id="amount" placeholder="Сумма"/>
+
       <button onclick="addTransaction()">Добавить</button>
     </div>
   </div>
 
-  <div class="card">
-    <h3>История транзакций</h3>
-    <ul class="transaction-list" id="transactionList"></ul>
-  </div>
-
   <script>
-  const tg = window.Telegram.WebApp;
-  tg.expand();
+    const tg = window.Telegram.WebApp;
+    tg.expand();
 
-  // Отправка формы
-  document.getElementById('form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const form = e.target;
-    const data = {
-      type: form.type.value,
-      amount: parseFloat(form.amount.value),
-      category: form.category.value,
-      comment: form.comment.value
-    };
-    const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-    if (res.ok) {
-      await loadStats(); // обновим статистику после добавления
-      tg.close();
-    } else {
-      alert("Ошибка!");
+    async function addTransaction() {
+      const type = document.getElementById("type").value;
+      const description = document.getElementById("description").value;
+      const amount = parseFloat(document.getElementById("amount").value);
+
+      if (!description || !amount || isNaN(amount)) {
+        alert("Введите корректные данные");
+        return;
+      }
+
+      const data = {
+        type: type,
+        amount: amount,
+        comment: description,
+        category: "default"  // обязательно, если требуется в сериализаторе
+      };
+
+      try {
+        const res = await fetch("https://fintracker-51hz.onrender.com/api/add_transaction/", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        if (res.ok) {
+          await loadStats();
+          tg.close(); // Закрытие мини-аппа
+        } else {
+          alert("Ошибка при добавлении");
+        }
+      } catch (err) {
+        console.error("Ошибка сети", err);
+        alert("Сетевая ошибка");
+      }
     }
-  });
 
-  // Получение и отображение общей статистики
-  async function loadStats() {
-    try {
-      const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
-      const stats = await res.json();
-      const el = document.getElementById("stats");
-      el.innerHTML = `
-        <b>Доход:</b> ${stats.income} ₽<br>
-        <b>Расход:</b> ${stats.expense} ₽
-      `;
-    } catch (e) {
-      console.error("Ошибка при получении статистики", e);
+    async function loadStats() {
+      try {
+        const res = await fetch("https://fintracker-51hz.onrender.com/api/get_stats/");
+        const stats = await res.json();
+        document.getElementById("stats").innerHTML = `
+          <strong>Доход:</strong> ${stats.income} ₽<br>
+          <strong>Расход:</strong> ${stats.expense} ₽
+        `;
+      } catch (err) {
+        console.error("Ошибка при получении статистики", err);
+      }
     }
-  }
 
-  // Загружаем статистику при открытии
-  loadStats();
-</script>
-
+    loadStats();
+  </script>
 </body>
 </html>

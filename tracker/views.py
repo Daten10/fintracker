@@ -4,6 +4,7 @@ from .models import Transaction
 from .serializers import TransactionSerializer
 from django.db.models import Sum
 
+
 @api_view(['POST'])
 def add_transaction(request):
     serializer = TransactionSerializer(data=request.data)
@@ -11,6 +12,7 @@ def add_transaction(request):
         serializer.save()
         return Response({'status': 'success'})
     return Response(serializer.errors, status=400)
+
 
 @api_view(['GET'])
 def get_stats(request):
